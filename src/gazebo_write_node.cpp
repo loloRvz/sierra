@@ -59,7 +59,7 @@ int main(int argc, char ** argv) {
 	load_params(nh);
 
 	// Get input signals from csv files
-	std::string pkg_path = ros::package::getPath("siesta");
+	std::string pkg_path = ros::package::getPath("sierra");
 	std::string csv_path = pkg_path + "/data/input_signals/signals.csv";
 	std::vector<std::vector<float>> input_signals = parse_csv(csv_path);
 	int input_idx = 0;
@@ -80,7 +80,7 @@ int main(int argc, char ** argv) {
 		msg.header.stamp = ros::Time::now();
 
 		// Update msg setpoint
-		msg.angles[6] = input_signals[input_idx][INPUT_TYPE];
+		msg.angular_velocities[0] = input_signals[input_idx][INPUT_TYPE];
 
 		// Iterate or loop around
 		input_idx++;

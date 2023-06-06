@@ -48,7 +48,7 @@ int main(int argc, char ** argv) {
 	load_params(nh);
 
 	// Get input signals from csv files
-	std::string pkg_path = ros::package::getPath("siesta");
+	std::string pkg_path = ros::package::getPath("sierra");
 	std::string csv_path = pkg_path + "/data/input_signals/signals.csv";
 	std::vector<std::vector<float>> input_signals = parse_csv(csv_path);
 	int input_idx = 0;

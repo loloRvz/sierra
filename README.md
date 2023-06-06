@@ -1,5 +1,5 @@
-# Siesta
-State-Inferred Electric Servo Torque Approximation
+# Sierra
+State-Inferred Electric Rotor Rate Approximation
 
 ## Description
 This repo comprises work related to my Master Thesis, in which I aim to learn the model dynamics of a Dynamixel XM430-W210 servo-motor using supervised learning. 
@@ -39,11 +39,11 @@ and run all its necessary install scripts.
 
 Then, build the ros nodes with 
 ~~~
-catkin build siesta
+catkin build sierra
 ~~~
 After connecting and turn on the motor controller, set the experiment's input signal and load_id in the config file and launch the exeperiment:
 ~~~
-roslaunch siesta data_collection.launch
+roslaunch sierra data_collection.launch
 ~~~
 
 This program generates csv files with the captured motor data. The filenames consist of the date and time, the input signal type, and the used load. 
@@ -51,7 +51,7 @@ This program generates csv files with the captured motor data. The filenames con
 ### Model training 
 The python scripts for training a network using experimental data are located in the /scripts/ directory.
 
-*siesta_mlp.py*:
+*sierra_mlp.py*:
 - Read the csv dataset
 - Compute velocity & acceleration from positions
 - Prepare network data (inputs & target) with a given position history length

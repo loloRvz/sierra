@@ -23,7 +23,7 @@
   <arg name="log_file" default="$(arg mav_name)" />
   <arg name="enable_ground_truth" default="true" />
 
-  <arg name="use_hook" default="true" />
+  <arg name="use_hook" default="false" />
   <arg name="vehicle_config" default="hook" if="$(arg use_hook)" />
   <arg name="vehicle_config" default="battery" unless="$(arg use_hook)" />
 

@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 
-from siesta_mlp import *
+from src.sierra.scripts.sierra_mlp import *
 
 from scipy import signal
 

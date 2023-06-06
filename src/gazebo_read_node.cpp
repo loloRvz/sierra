@@ -11,15 +11,15 @@
 
 #include "experiment_parameters.h"
 
-#define MOTOR_ID 6
+#define MOTOR_ID 0
 
 using namespace experiment_parameters;
 
 // Setpoint topic callback
-class PositionSetter{
+class VelocitySetter{
 	public:
 		void setPointCallback(mav_msgs::Actuators msg) {
-			set_point = msg.angles[MOTOR_ID];
+			set_point = msg.angular_velocities[MOTOR_ID];
 		}
 		double getSetPoint() {
 			return set_point;
@@ -30,10 +30,10 @@ class PositionSetter{
 };
 
 // Position topic callback
-class PositionGetter{
+class VelocityGetter{
 	public:
 		void getPosCallback(mav_msgs::Actuators msg) {
-			position = msg.angles[MOTOR_ID];
+			position = msg.angular_velocities[MOTOR_ID];
 		}
 		double getPos() {
 			return position;
@@ -50,27 +50,25 @@ int main(int argc, char ** argv) {
 	ros::init(argc, argv, "gazebo_read_node");
 	ros::NodeHandle nh;
 	load_params(nh); // Get experiment parameters
-	PositionSetter ps;
-	PositionGetter pg;
-	ros::Subscriber set_position_sub = nh.subscribe("/stork/command/motor_speed", 1000, &PositionSetter::setPointCallback, &ps);
-	ros::Subscriber get_position_sub = nh.subscribe("/stork/gazebo/motor_states", 1000, &PositionGetter::getPosCallback, &pg);
+	VelocitySetter vs;
+	VelocityGetter vg;
+	ros::Subscriber set_position_sub = nh.subscribe("/stork/command/motor_speed", 1000, &VelocitySetter::setPointCallback, &vs);
+	ros::Subscriber get_position_sub = nh.subscribe("/stork/gazebo/motor_states", 1000, &VelocityGetter::getPosCallback, &vg);
 	ros::Rate rate(SMPL_FREQ);
 
 	// Some variables...
-	float set_point_angle;
-	float position_angle;
+	float set_point_velocity;
+	float actual_veloctiy;
 
 	// Create filename for experiment data
 	time_t curr_time; 
 	tm * curr_tm;
-	char file_str[100], time_str[100], exprmt_descr_str[100], data_str[100];
-	strcpy(file_str, "/home/lolo/omav_ws/src/siesta/data/measurements_quail_gazebo/"); //Global path
+	char file_str[100], time_str[100], data_str[100];
+	strcpy(file_str, "/home/lolo/omav_ws/src/sierra/data/measurements_quail_gazebo/"); //Global path
 	time(&curr_time);
 	curr_tm = localtime(&curr_time);
 	strftime(time_str, 100, "%y-%m-%d--%H-%M-%S_", curr_tm);
 	strcat(file_str,time_str);  // Add date & time
-	sprintf(exprmt_descr_str, "%dHz-L%d-",SMPL_FREQ,LOAD_ID);
-	strcat(file_str,exprmt_descr_str); //Add load id
 	//Add input type
 	strcat(file_str,input_types_strings[INPUT_TYPE]);
 	strcat(file_str,".csv");
@@ -80,10 +78,7 @@ int main(int argc, char ** argv) {
 	myfile.open(file_str);
 	myfile << "time[s],"
 			  "setpoint[rad],"
-			  "position[rad],"
-			  "current[mA],"
-			  "velocity_computed[rad/s],"
-			  "acceleration_computed[rad/s^2] \n"; // Set column descriptions
+			  "velocity[rad]\n"; // Set column descriptions
 
 	// Wait for first setpoint topic to be published
 	ros::topic::waitForMessage<mav_msgs::Actuators>("/stork/command/motor_speed",ros::Duration(5));
@@ -98,17 +93,14 @@ int main(int argc, char ** argv) {
 		t_now = ros::Time::now();
 
 		// Read motor data & write setpoint
-		set_point_angle = ps.getSetPoint() + M_PI;
-		position_angle = pg.getPos() + M_PI;
+		set_point_velocity = vs.getSetPoint();
+		actual_veloctiy = vg.getPos();
 
 		// Write data to csv file
-		sprintf(data_str, "%10.6f,%07.5f,%07.5f,%03.3f,%03.3f,%03.3f\n",
+		sprintf(data_str, "%10.6f,%07.5f,%07.5f\n",
 			(t_now - t_start).toSec(),
-			set_point_angle - M_PI, 
-			position_angle - M_PI, 
-			NAN,
-			NAN,
-			NAN);
+			set_point_velocity, 
+			actual_veloctiy);
 		myfile << data_str;
 
 		// Loop

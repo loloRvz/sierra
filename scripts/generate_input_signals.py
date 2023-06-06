@@ -10,34 +10,40 @@ import math
 
 
 ## INPUT SIGNAL PARAMETERS ##
+STEP, RAMP, CHRP, FLIT, NOIS, MIXD = range(6)
+
 # General
-DATA_LENGTH = 1000   # [s]
+DATA_LENGTH = 1024   # [s]
 CTRL_FREQ = 200     # [Hz]
 
 # Step input
-STEP_FREQ = 5       # [Hz]
-STEP_VAR = 0.05     # [Rad]
+STEP_FREQ = 1       # [Hz]
+STEP_MIN = 1500     # [RMP]
+STEP_MAX = 9000     # [RMP]
 
 # Ramp input
-RAMP_FREQ = 5       # [Hz]
-RAMP_VAR = 0.05      # [Rad]
+RAMP_FREQ = 1       # [Hz]
+RAMP_MIN = 1500     # [RMP]
+RAMP_MAX = 9000     # [RMP]
 
 # Chirp input 
-CHRP_AMPL = 0.025               # [Rad]
+CHRP_STEP_FREQ = 0.5
+CHRP_AMPL = 100               # [Rad]
 CHRP_FREQ1 = 0.05 *2*math.pi   # [Rad/s]
 CHRP_FREQ2 =   15 *2*math.pi   # [Rad/s]
 CHRP_PERIOD = 1                # [s]
 
 # White noise input params
-NOIS_VARIANCE = 0.025  # [s]
+NOIS_STEP_FREQ = 0.5
+NOIS_VARIANCE = 100  # [s]
 
 # Flight data input
-FLIT_FILE = "23-02-08--21-26-11_ID5.csv"
+FLIT_FILE = "/../data/flight_data/aggressive.csv"
 
 # Mixed input containing all types of data input
-MIXD_INTERVAL = 3  # [s]
+MIXD_INTERVAL = 5  # [s]
+MIXD_MIX = [STEP,RAMP,CHRP,FLIT,NOIS]
 
-STEP, RAMP, CHRP, FLIT, NOIS, MIXD = range(6)
 
 
 ## FUNCTIONS ##
@@ -53,32 +59,34 @@ def main():
     df = pd.DataFrame()
 
     # Compute random step input
-    step_inputs = np.random.normal(0, STEP_VAR, DATA_LENGTH*STEP_FREQ)
+    step_inputs = np.random.uniform(low=STEP_MIN,high=STEP_MAX, size=(DATA_LENGTH*STEP_FREQ,))
     step_inputs = np.repeat(step_inputs, CTRL_FREQ/STEP_FREQ)
-    # step_inputs = np.array([[STEP_VAR,-STEP_VAR]] * int(DATA_LENGTH*STEP_FREQ/2))
-    # step_inputs = np.repeat(step_inputs, CTRL_FREQ/STEP_FREQ)
     df["step"] = pd.DataFrame(step_inputs)
 
     # Compute random ramp input
-    ramp_inputs = np.random.normal(0, RAMP_VAR, DATA_LENGTH*RAMP_FREQ)
+    ramp_inputs = np.random.uniform(low=RAMP_MIN,high=RAMP_MAX, size=(DATA_LENGTH*STEP_FREQ,))
     ramp_inputs = np.interp(np.arange(DATA_LENGTH*CTRL_FREQ),np.arange(DATA_LENGTH*RAMP_FREQ)*CTRL_FREQ/RAMP_FREQ,ramp_inputs)
     df["ramp"] = pd.DataFrame(ramp_inputs)
 
     # Compute chirp signal input
-    chrp_inputs = np.array([chirp_signal(t) for t in np.arange(0,DATA_LENGTH,1/CTRL_FREQ)])
+    chrp_inputs = np.random.uniform(low=STEP_MIN,high=STEP_MAX, size=int(DATA_LENGTH*CHRP_STEP_FREQ,))
+    chrp_inputs = np.repeat(chrp_inputs, CTRL_FREQ/CHRP_STEP_FREQ)
+    chrp_inputs = chrp_inputs + np.array([chirp_signal(t) for t in np.arange(0,DATA_LENGTH,1/CTRL_FREQ)])
     df["chrp"] = pd.DataFrame(chrp_inputs)
 
     # Parse flight data setpoints
-    flit_data_path = dir_path + "/../data/flight_data/normal.csv"
+    flit_data_path = dir_path + FLIT_FILE
     flit_df = pd.read_csv(flit_data_path)
-    flit_inputs = flit_df["setpoint[rad]"].to_numpy()[10000:] # remove first 10'000 data points (avoid constant input)
+    flit_inputs = flit_df["setpoint[rad]"].to_numpy()
     n_repeat = math.floor(DATA_LENGTH*CTRL_FREQ / flit_inputs.size ) + 1
     flit_inputs = np.tile(flit_inputs,n_repeat)
     flit_inputs = flit_inputs[:DATA_LENGTH*CTRL_FREQ] 
     df["flit"] = pd.DataFrame(flit_inputs)
 
     # Compute white noise input type
-    nois_inputs = np.random.rand(DATA_LENGTH*CTRL_FREQ) * 2*NOIS_VARIANCE - NOIS_VARIANCE
+    nois_inputs = np.random.uniform(low=STEP_MIN,high=STEP_MAX, size=int(DATA_LENGTH*NOIS_STEP_FREQ,))
+    nois_inputs = np.repeat(nois_inputs, CTRL_FREQ/NOIS_STEP_FREQ)
+    nois_inputs = nois_inputs + np.random.rand(DATA_LENGTH*CTRL_FREQ) * 2*NOIS_VARIANCE - NOIS_VARIANCE
     df["nois"] = pd.DataFrame(nois_inputs)
 
 
@@ -88,7 +96,7 @@ def main():
     seg_size = MIXD_INTERVAL*CTRL_FREQ
 
     # Choose which type of input signals to include in mix
-    mix = [STEP,CHRP,FLIT]
+    mix = MIXD_MIX
     m = len(mix)
 
     arr = np.zeros((seg_size,m))
@@ -106,8 +114,8 @@ def main():
 
     print("Computed inputs:")
     print(df)
-    # df.plot()
-    # plt.show()
+    df.plot()
+    plt.show()
 
     # Write dataframe to csv file
     df.to_csv(dir_path + "/../data/input_signals/signals.csv", index=False)

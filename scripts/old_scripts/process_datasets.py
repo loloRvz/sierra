@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 
-from siesta_mlp import *
+from sierra_mlp import *
 
 
 ### SCRIPT ###

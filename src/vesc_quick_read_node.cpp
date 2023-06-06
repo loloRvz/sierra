@@ -56,14 +56,12 @@ int main(int argc, char ** argv) {
 	// Create filename for exprmt data
 	time_t curr_time; 
 	tm * curr_tm;
-	char file_str[100], time_str[100], exprmt_descr_str[100], data_str[100];
-	strcpy(file_str, "/home/lolo/omav_ws/src/siesta/data/measurements_quail/"); //Global path
+	char file_str[100], time_str[100], data_str[100];
+	strcpy(file_str, "/home/lolo/omav_ws/src/sierra/data/measurements_quail/"); //Global path
 	time(&curr_time);
 	curr_tm = localtime(&curr_time);
 	strftime(time_str, 100, "%y-%m-%d--%H-%M-%S_", curr_tm);
 	strcat(file_str,time_str);  // Add date & time
-	sprintf(exprmt_descr_str, "%dHz-L%d-",SMPL_FREQ,LOAD_ID);
-	strcat(file_str,exprmt_descr_str); //Add load id
 	//Add input type
 	strcat(file_str,input_types_strings[INPUT_TYPE]);
 	strcat(file_str,".csv");
