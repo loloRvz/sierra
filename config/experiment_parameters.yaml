@@ -1,0 +1,8 @@
+load_id : 9                 # Choose Load '1','2','3', or '0' for no load. Load '9' for drone arm
+
+
+control_frequency: 200      # Frequency of input signal to motor (should be 200 Hz)
+sample_frequency: 400       # Frequency at which the motor data is read
+
+input_type: 0               # 0: 'step' | 1: 'ramp' | 2: 'chrp' | 3: 'flit' | 4: 'nois' | 5: 'mixd' 
+

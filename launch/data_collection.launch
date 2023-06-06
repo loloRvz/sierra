@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+
+<launch>
+    <rosparam command="load" file="$(find siesta)/config/experiment_parameters.yaml"/>
+
+    <node pkg="sierra" type="set_point_publisher_node" name="set_point_publisher_node" output="screen"/>
+    <node pkg="sierra" type="dxl_quick_read_node" name="dxl_quick_read_node" output="screen"/>
+</launch>

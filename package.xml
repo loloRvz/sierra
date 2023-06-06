@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>sierra</name>
+  <version>0.0.0</version>
+
+  <description>State-Inferred Electric Rotor Rate Approximation (SIERRA)</description>
+  <maintainer email="rouvinez.laurent@gmail.com">lolo</maintainer>
+  <license>TODO</license>
+
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>catkin_simple</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>rospy</depend>
+  <depend>std_msgs</depend>
+
+  <depend>omav_hovery_interface</depend>
+  <depend>lpp</depend>
+
+  <build_depend>message_generation</build_depend>
+  
+  <export>
+  </export>
+</package>

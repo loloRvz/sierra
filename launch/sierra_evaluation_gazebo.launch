@@ -1,0 +1,207 @@
+<?xml version="1.0"?>
+
+<launch>
+  <!-- ************************ -->
+  <!-- ****** Parameters ****** -->
+  <!-- ************************ -->
+
+  <!-- vehicle config -->
+  <arg name="mav_name" default="stork" />
+  <arg name="add_manipulator" default="false" />
+
+  <!-- simulation config -->
+  <arg name="model" default="$(find mav_omav)/launch/simulation/urdf/stork.xacro" />
+  <arg name="world_name" default="force_trajectories" />
+  <arg name="debug" default="false" />
+  <arg name="gui" default="false" />
+  <arg name="paused" default="false" />
+  <arg name="verbose" default="false" />
+  <arg name="use_normal_estimation" default="false" />
+  <arg name="use_rviz" default="false" />
+
+  <arg name="enable_logging" default="false" />
+  <arg name="log_file" default="$(arg mav_name)" />
+  <arg name="enable_ground_truth" default="true" />
+
+  <arg name="use_hook" default="true" />
+  <arg name="vehicle_config" default="hook" if="$(arg use_hook)" />
+  <arg name="vehicle_config" default="battery" unless="$(arg use_hook)" />
+
+  <arg name="network_path" default="" />
+  <arg name="door_handle_topic" default="" />
+
+
+  <!-- controller config -->
+  <!-- control module options:
+  estimator:            estimates external disturbances on the platform
+  wrench_sensor_filter: filters force/torques sensor measurements
+  impedance:            impedance control module
+  allocation:           allocates wrench to actuator commands -->
+  <arg name="control_modules" default="[estimator, impedance, allocation]" />
+  <arg name="ctrl-sliders" default="true" />
+  <arg name="waypoint_file_name" value="published_waypoints.yaml" />
+
+  <arg name="msf_transform_topic" default="odometry_sensor/transform" />
+  <arg name="msf_imu_topic" default="imu" />
+  <arg name="odometry_topic_msf" default="ground_truth/odometry" />
+  <!-- Options: odometry_sensor, ground_truth, msf_core -->
+  <arg name="wrench_sensor_topic" default="wrench_vector" />
+  <arg name="world_frame_name" default="world" />
+
+  <arg name="use_touch_planner" default="false" />
+
+
+  <arg name="dir_param_files" value="$(find mav_omav)/config/$(arg mav_name)" />
+  <arg name="rviz_file" default="$(arg dir_param_files)/simulation/$(arg mav_name)_inspection.rviz" />
+
+  <param name="/use_sim_time" value="true" />
+
+  <!-- ************************ -->
+  <!-- ****** Simulation ****** -->
+  <!-- ************************ -->
+
+  <!-- ***** GAZEBO ***** -->
+  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models:$(find mav_omav)/launch/simulation" />
+  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models" />
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find mav_omav)/launch/simulation/worlds/$(arg world_name).world" />
+    <arg name="debug" value="$(arg debug)" />
+    <arg name="paused" value="$(arg paused)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="verbose" value="$(arg verbose)" />
+  </include>
+
+  <!-- ***** Spawn MAV ***** -->
+  <!-- Send the robot XML to param server. -->
+  <param name="robot_description" command="
+    $(find xacro)/xacro --inorder '$(arg model)' enable_logging:=$(arg enable_logging) enable_ground_truth:=$(arg enable_ground_truth) log_file:=$(arg log_file) wait_to_record_bag:=false mav_name:=$(arg mav_name) namespace:=$(arg mav_name) use_hook:=$(arg use_hook)" />
+  <param name="tf_prefix" type="string" value="$(optenv ROS_NAMESPACE)" />
+
+  <!-- Push robot_description to factory and spawn robot in gazebo. -->
+  <node name="spawn_$(arg mav_name)" pkg="gazebo_ros" type="spawn_model" args="-param robot_description
+         -urdf
+         -x -0.4
+         -y 0.2
+         -z 0.3
+         -Y -1.570796
+         -model $(arg mav_name)" respawn="false" output="screen">
+  </node>
+
+  <!-- ***** Rviz ***** -->
+  <group if="$(arg use_rviz)">
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_file)" />
+  </group>
+
+
+  <!-- ********************** -->
+  <!-- ***** Controller ***** -->
+  <!-- ********************** -->
+  <group ns="sierra">
+    <rosparam command="load" file="$(find sierra)/config/experiment_parameters.yaml"/>
+
+    <node pkg="sierra" type="gazebo_read_node" name="gazebo_read_node" output="screen"/>
+    <node pkg="sierra" type="gazebo_write_node" name="gazebo_write_node" output="screen"/>
+  </group>  <!-- ns="$(arg mav_name)" -->
+
+
+  <!-- *************** -->
+  <!-- ***** MSF ***** -->
+  <!-- *************** -->
+  <group ns="$(arg mav_name)">
+    <node name="pose_sensor" pkg="msf_updates" type="pose_sensor" clear_params="true" output="screen">
+      <remap from="msf_updates/transform_input" to="$(arg msf_transform_topic)" />
+      <remap from="msf_core/imu_state_input" to="$(arg msf_imu_topic)" />
+      <rosparam file="$(arg dir_param_files)/msf_parameters_sim.yaml" />
+      <param name="capability_group" value="StateEstimation" />
+    </node>
+  </group>  <!-- ns="$(arg mav_name)" -->
+
+
+  <!-- ******************* -->
+  <!-- ***** Sensing ***** -->
+  <!-- ******************* -->
+  <group ns="$(arg mav_name)">
+
+    <!-- ***** Force Sensor ***** -->
+    <!--
+    <group if="$(arg add_manipulator)">
+      <node name="omav_wrench_observer_node" pkg="omav_wrench_observer" type="omav_wrench_observer_node" output="screen">
+      <rosparam file="$(arg dir_param_files)/$(arg mav_name)/vehicle_params_$(arg mav_name)_$(arg vehicle_config).yaml"/>
+        <remap from="force_sensor" to="wrench_vector"/>
+        <remap from="wrench_estimate" to="filtered_force_sensor"/>
+      </node>
+    </group> -->
+
+    <!-- ***** Normal Estimation ***** -->
+    <group if="$(arg use_normal_estimation)">
+      <node name="normal_estimation" type="tof_normal_estimation_node" pkg="tof_normal_estimation" output="screen">
+        <param name="min_points" value="50" />
+        <param name="selection_radius" value="0.2" />
+        <param name="selection_min_distance" value="0.0" />
+        <param name="selection_max_distance" value="10.0" />
+        <param name="camera_frame_name" value="$(arg mav_name)/rgbd/camera_depth_optical_center_link" />
+        <param name="end_effector_frame_name" value="tool" />
+        <remap from="pointcloud" to="rgbd/camera_depth/depth/points" />
+        <remap from="distance" to="range_sensor" />
+      </node>
+    </group>
+
+    <!-- Mesh based touch planner -->
+    <group if="$(arg use_touch_planner)">
+      <node name="omav_touch_planner" pkg="cpt_ros" type="omav_touch_planner_node" output="screen">
+        <param name="world_frame_name" value="$(arg world_frame_name)" />
+        <param name="map_frame_name" value="map" />
+        <param name="selection_frame_name" value="map_select" />
+        <param name="body_frame_name" value="$(arg mav_name)/base_link" />
+        <param name="endeffector_frame_name" value="$(arg mav_name)/tool" />
+
+        <param name="mesh_path" value="$(find mav_omav)/launch/simulation/meshes/vicon.off" />
+        <param name="touch_position" type="yaml" value="[0.0, 0.0, 0.0]" />
+        <param name="touch_random_bounds" type="yaml" value="[0.0, 0.8, 0.45]" />
+      </node>
+    </group>    <!-- if="$(arg use_touch_planner)" -->
+
+  </group>  <!-- ns="$(arg mav_name)" -->
+
+
+  <!-- ************************** -->
+  <!-- ***** Ground Station ***** -->
+  <!-- ************************** -->
+  <group ns="$(arg mav_name)">
+    <!-- ***** Local Planner ***** -->
+    <node name="local_planner" pkg="omav_local_planner" type="omav_trajectories_node" output="screen" clear_params="true">
+      <rosparam file="$(find omav_local_planner)/resource/omav_local_planner_params.yaml" />
+      <param name="world_frame_name" value="$(arg world_frame_name)" />
+      <param name="published_waypoints_file" value="$(arg waypoint_file_name)" />
+      <remap from="odometry" to="$(arg odometry_topic_msf)" />
+      <param name="capability_group" value="Planning" />
+    </node>
+
+    <!-- ***** Sliders ***** -->
+    <group if="$(arg ctrl-sliders)">
+      <node name="full_pose_waypoint_node" pkg="omni_navigation_tools" type="full_pose_waypoint_node" output="screen">
+        <param name="odometry_topic" value="$(arg odometry_topic_msf)" />
+        <param name="world_frame_name" value="$(arg world_frame_name)" />
+        <param name="capability_group" value="Planning" />
+      </node>
+    </group>
+
+    <!-- ***** GUI ***** -->
+    <!--node pkg="omav_gui" name="omav_gui" type="omav_gui.py" output="screen">
+      <param name="allow_arming" value="true" />
+    </node-->
+
+    <!-- ***** RQT ***** -->
+    <!--node name="rqt_reconfig" pkg="rqt_reconfigure" type="rqt_reconfigure" output="screen" /-->
+
+  </group>  <!-- ns="$(arg mav_name)" -->
+
+  <!-- *************** -->
+  <!-- ***** TFs ***** -->
+  <!-- *************** -->
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_base_imu" args="0 0 0 0 0 0 1.0 $(arg mav_name)/base_link imu" />
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_base_rokubi" args="0.51 0 0 1.570796 3.14159 1.570796 $(arg mav_name)/base_link rokubi" />
+
+</launch>
