@@ -6,8 +6,10 @@
 #include <math.h>
 
 #include "std_msgs/Float32.h"
-#include "omav_hovery_interface/ll/dynamixel_motor_adapter.h"
-#include "omav_hovery_interface/ll/polling_thread.h"
+#include "omav_hovery_demo/omV_vescuart_single_node.h"
+#include <omav_hovery_interface/mock/memory_arming_logic.h>
+#include <omav_hovery_interface/mock/memory_rcreceiver_adapter.h>
+#include <omav_msgs/MotorStatus.h>
 
 #include "motor_specs.h"
 #include "experiment_parameters.h"
@@ -42,16 +44,16 @@ int main(int argc, char ** argv) {
 
 	
 
-	// Declare motors & interfaces
-	std::array<int, 1> dynamixels = {DXL1_ID};
-	std::array<double, 1> setPointAngle{M_PI};
-	std::array<double, 1> offsets{-1.636};
-	omV::ll::MotorInterface<_POS>::MotorStatusArray readBackStatus;
-	omV::ll::DynamixelMotorAdapter<_POS> ta_adapter(DEVICE_NAME, BAUDRATE, dynamixels, offsets);
+	// Declare motors & init
+	omV::ll::VESCUartMotorAdapter adapter("/dev/ttyACM0");
+	esc_adapter_ = std::make_shared<omV::ll::VESCUartMotorAdapter>(adapter);
+	esc_adapter_->open();
 
-	// Init motor
-	ta_adapter.open();
-	ta_adapter.enable();
+	auto dummy_rc = std::make_shared<omV::mock::MemoryRCReceiverAdapter>();
+	auto arming_logic = std::make_shared<omV::mock::MemoryArmingLogic>();
+	arming_logic->arm();
+
+	ms_client_.setInterface(esc_adapter_, dummy_rc, arming_logic);
 
 	// Create filename for exprmt data
 	time_t curr_time; 
@@ -71,11 +73,8 @@ int main(int argc, char ** argv) {
 	std::ofstream myfile;
 	myfile.open(file_str);
 	myfile << "time[s],"
-			  "setpoint[rad],"
-			  "position[rad],"
-			  "current[mA],"
-			  "velocity_computed[rad/s],"
-			  "acceleration_computed[rad/s^2]\n"; // Set column descriptions
+			  "setpoint[rad/s],"
+			  "position[rad/s]\n"; // Set column descriptions
 
 	// Wait for first setpoint topic to be published
 	ros::topic::waitForMessage<std_msgs::Float32>(setpoint_topic_,ros::Duration(5));
@@ -90,18 +89,13 @@ int main(int argc, char ** argv) {
 		t_now = std::chrono::system_clock::now();
 
 		// Read motor data & write setpoint
-		setPointAngle[0] = ps.getSetPoint();
-		ta_adapter.write(setPointAngle);
-		readBackStatus = ta_adapter.read();
+		ms_client_.setFullState({set_point});
 
 		// Write data to csv file
-		sprintf(data_str, "%10.6f,%07.5f,%06.3f,%08.2f,%03.3f,%03.3f\n",
-			duration_cast<microseconds>(t_now - t_start).count()/1e6,
-			readBackStatus[0].setpoint - offsets[0], 
-			readBackStatus[0].position,
-			readBackStatus[0].current,
-			NAN,
-			NAN);
+		sprintf(data_str, "%10.6f,%07.2f,%07.2f\n",
+			duration_cast<microseconds>(t_now - t_start).count()/1e6)//,
+			//readBackStatus[0].setpoint, 
+			//readBackStatus[0].position);
 		myfile << data_str;
 
 		// Loop

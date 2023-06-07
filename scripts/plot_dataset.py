@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 
-from src.sierra.scripts.sierra_mlp import *
+from sierra_mlp import *
 
 
 ### SCRIPT ###
@@ -18,7 +18,6 @@ def main():
 
     # Prepare & plot dataset
     dataset = CSVDataset(path)
-    dataset.preprocess()
     dataset.plot_data()
 
 

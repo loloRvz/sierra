@@ -26,7 +26,7 @@ from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import mean_squared_error
 
 # Data columns
-TIME, SETPOINT, POSITION = range(3)
+TIME, SETPOINT, VELOCITY = range(3)
 
 
 ### CLASSES ###
@@ -43,7 +43,6 @@ class CSVDataset(Dataset):
 
         print("Loading model: ", os.path.basename(self.path))
         
-
     # plot dataset
     def plot_data(self):
         data = self.df.to_numpy()
@@ -51,12 +50,12 @@ class CSVDataset(Dataset):
         fig,ax=plt.subplots()
         #ax.plot(data[:,TIME],data[:,SETPOINT:ACCELERATION_COMP+1])
         ax.plot(data[:,TIME],data[:,SETPOINT])
-        ax.plot(data[:,TIME],data[:,POSITION])
+        ax.plot(data[:,TIME],data[:,VELOCITY])
         ax.axhline(y=0, color='k')
         ax.set_xlabel("Time [s]")
         ax.set_ylabel("Amplitude")
-        ax.legend([ "Setpoint [rad]", \
-                    "Position [rad]"]) # \                      
+        ax.legend([ "Setpoint [rpm]", \
+                    "Velocity [rpm]"]) # \                      
         plt.title("Motor data reading @400Hz")
 
         plt.show()
@@ -67,13 +66,12 @@ class CSVDataset(Dataset):
         self.X = np.resize(self.X,(data.shape[0],hist_len))
 
         n = 1
-
         #Get position error history
-        for i in range(hist_len):
-            self.X[:,i] = np.roll(data[POSIS], n*i)
-            self.X[:n*i,i] = np.nan
-        self.X = self.X[n*(hist_len-1):,:] #Cut out t<0
+        self.X[:,0] = data[:,SETPOINT]
+        for i in range(1,hist_len):
+            self.X[:,i] = np.roll(data[:,VELOCITY], n*(i-1))
 
+        self.X = self.X[n*(hist_len-1):,:] #Cut out t<0
         self.y = self.y[n*(hist_len-1):] #Cut out t<0
 
         # Get corresponding times
@@ -265,24 +263,22 @@ def main():
 
     # Model parameters
     h_len = 8
-    T_via = 'a'
 
     # Open training dataset
     dir_path = os.path.dirname(os.path.realpath(__file__))
     list_of_files = glob.glob(dir_path + '/../data/training/*.csv')
     list_of_files = sorted(list_of_files)
     list_of_files.reverse()
-    path = list_of_files[1]
+    path = list_of_files[0]
     print("Opening: ",path)
 
     # Prepare dataset
     dataset = CSVDataset(path)
-    dataset.preprocess(resave=True)
-    dataset.prepare_data(hist_len=h_len, T_via = T_via)
+    dataset.prepare_data(hist_len=h_len)
     train_dl, test_dl = dataset.get_splits(n_test=0.1) # Get data loaders
 
     # Make dir for model
-    model_dir = "../data/models/"+os.path.basename(path)[:-4]+"-PHL"+str(h_len).zfill(2)+"_T"+T_via
+    model_dir = "../data/models/"+os.path.basename(path)[:-4]+"-PHL"+str(h_len).zfill(2)
     print("Opening directory: ",model_dir)
     os.makedirs(model_dir, exist_ok=True)
 

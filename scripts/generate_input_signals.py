@@ -17,31 +17,31 @@ DATA_LENGTH = 1024   # [s]
 CTRL_FREQ = 200     # [Hz]
 
 # Step input
-STEP_FREQ = 1       # [Hz]
+STEP_FREQ = 5       # [Hz]
 STEP_MIN = 1500     # [RMP]
 STEP_MAX = 9000     # [RMP]
 
 # Ramp input
-RAMP_FREQ = 1       # [Hz]
+RAMP_FREQ = 5       # [Hz]
 RAMP_MIN = 1500     # [RMP]
 RAMP_MAX = 9000     # [RMP]
 
 # Chirp input 
 CHRP_STEP_FREQ = 0.5
-CHRP_AMPL = 100               # [Rad]
+CHRP_AMPL = 500               # [Rad]
 CHRP_FREQ1 = 0.05 *2*math.pi   # [Rad/s]
 CHRP_FREQ2 =   15 *2*math.pi   # [Rad/s]
 CHRP_PERIOD = 1                # [s]
 
 # White noise input params
 NOIS_STEP_FREQ = 0.5
-NOIS_VARIANCE = 100  # [s]
+NOIS_VARIANCE = 200  # [s]
 
 # Flight data input
 FLIT_FILE = "/../data/flight_data/aggressive.csv"
 
 # Mixed input containing all types of data input
-MIXD_INTERVAL = 5  # [s]
+MIXD_INTERVAL = 3  # [s]
 MIXD_MIX = [STEP,RAMP,CHRP,FLIT,NOIS]
 
 

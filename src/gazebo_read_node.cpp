@@ -77,8 +77,8 @@ int main(int argc, char ** argv) {
 	std::ofstream myfile;
 	myfile.open(file_str);
 	myfile << "time[s],"
-			  "setpoint[rad],"
-			  "velocity[rad]\n"; // Set column descriptions
+			  "setpoint[rad/s],"
+			  "velocity[rad/s]\n"; // Set column descriptions
 
 	// Wait for first setpoint topic to be published
 	ros::topic::waitForMessage<mav_msgs::Actuators>("/stork/command/motor_speed",ros::Duration(5));
@@ -97,7 +97,7 @@ int main(int argc, char ** argv) {
 		actual_veloctiy = vg.getPos();
 
 		// Write data to csv file
-		sprintf(data_str, "%10.6f,%07.5f,%07.5f\n",
+		sprintf(data_str, "%10.6f,%07.1f,%07.1f\n",
 			(t_now - t_start).toSec(),
 			set_point_velocity, 
 			actual_veloctiy);
