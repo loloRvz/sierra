@@ -5,12 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os, glob
 
-from derivative import SavitzkyGolay
-from scipy.integrate import odeint, solve_ivp
-from scipy.interpolate import interp1d
-from scipy import integrate
-from scipy.linalg import toeplitz
-
 import torch
 from torch.nn.init import xavier_uniform_
 from torch.nn import MSELoss
@@ -18,7 +12,7 @@ from torch.optim import SGD
 from torch.nn import Module
 from torch.nn import Softsign
 from torch.nn import Linear
-from torch import Tensor
+from torch.nn import LayerNorm
 from torch.utils.data import random_split, Subset, DataLoader, Dataset
 
 from torch.utils.tensorboard import SummaryWriter
@@ -54,28 +48,31 @@ class CSVDataset(Dataset):
         ax.axhline(y=0, color='k')
         ax.set_xlabel("Time [s]")
         ax.set_ylabel("Amplitude")
-        ax.legend([ "Setpoint [rpm]", \
-                    "Velocity [rpm]"]) # \                      
+        ax.legend([ "Setpoint [RPM]", \
+                    "Velocity [RPM]"]) # \                      
         plt.title("Motor data reading @400Hz")
 
         plt.show()
 
     # prepare inputs and labels for learning process
-    def prepare_data(self,hist_len,T_via, freq=400):
+    def prepare_data(self,hist_len):
         data = self.df.to_numpy(dtype=np.float64)
-        self.X = np.resize(self.X,(data.shape[0],hist_len))
+        data = data[100:,:]
 
-        n = 1
+        self.X = np.resize(self.X,(data.shape[0],hist_len+1))
+
         #Get position error history
-        self.X[:,0] = data[:,SETPOINT]
-        for i in range(1,hist_len):
-            self.X[:,i] = np.roll(data[:,VELOCITY], n*(i-1))
+        self.X[:,0] = np.roll(data[:,SETPOINT], 1)
+        for i in range(1,hist_len+1):
+            self.X[:,i] = np.roll(data[:,VELOCITY], i)
 
-        self.X = self.X[n*(hist_len-1):,:] #Cut out t<0
-        self.y = self.y[n*(hist_len-1):] #Cut out t<0
+        self.y = data[:,VELOCITY]
+
+        self.X = self.X[hist_len:,:] #Cut out t<0
+        self.y = self.y[hist_len:] #Cut out t<0
 
         # Get corresponding times
-        self.t = data[n*(hist_len-1):,TIME]#Cut out t<0
+        self.t = data[hist_len:,TIME]#Cut out t<0
 
     # get indexes for train and test rows
     def get_splits(self, n_test=0.1):
@@ -105,21 +102,25 @@ class MLP(Module):
     def __init__(self, n_inputs, n_outputs, dev, layerDim):
         super(MLP, self).__init__()
         self.dev = dev
+
         # input to first hidden layer
-        self.hidden1 = Linear(n_inputs, layerDim).to(self.dev)
-        xavier_uniform_(self.hidden1.weight).to(self.dev)
+        self.input_layer = Linear(n_inputs, layerDim).to(self.dev)
+        xavier_uniform_(self.input_layer.weight).to(self.dev)
         self.act1 = Softsign().to(self.dev)
+
         # second hidden layer
+        self.hidden1 = Linear(layerDim, layerDim).to(self.dev)
+        xavier_uniform_(self.hidden1.weight).to(self.dev)
+        self.act2 = Softsign().to(self.dev)
+
+        # third hidden layer
         self.hidden2 = Linear(layerDim, layerDim).to(self.dev)
         xavier_uniform_(self.hidden2.weight).to(self.dev)
-        self.act2 = Softsign().to(self.dev)
-        # third hidden layer
-        self.hidden3 = Linear(layerDim, layerDim).to(self.dev)
-        xavier_uniform_(self.hidden3.weight).to(self.dev)
         self.act3 = Softsign().to(self.dev)
+
         # output
-        self.hidden4 = Linear(layerDim, n_outputs).to(self.dev)
-        xavier_uniform_(self.hidden4.weight).to(self.dev)
+        self.output_layer = Linear(layerDim, n_outputs).to(self.dev)
+        xavier_uniform_(self.output_layer.weight).to(self.dev)
         
         self.to(torch.float64)
 
@@ -127,19 +128,19 @@ class MLP(Module):
     def forward(self, X):
         # input to first hidden layer
         X = X.to(self.dev)
-        X = self.hidden1(X)
+        X = self.input_layer(X)
         X = self.act1(X)
-        # second hidden layer
-        X = self.hidden2(X)
-        X = self.act2(X)
-        # third hidden layer
-        X = self.hidden3(X)
-        X = self.act3(X)
+        # # second hidden layer
+        # X = self.hidden2(X)
+        # X = self.act2(X)
+        # # third hidden layer
+        # X = self.hidden3(X)
+        # X = self.act3(X)
         # fifth hidden layer and output
-        X = self.hidden4(X)
+        X = self.output_layer(X)
         return X
 
-
+         
 ### FUNCTIONS ###
 
 # train model
@@ -191,7 +192,7 @@ def train_model(train_dl, test_dl, model, dev, model_dir, lr):
             
             if epoch % 10 == 0 and epoch != 0:
                 print("Epoch: ", epoch)
-            if epoch % 250 == 0 and epoch != 0:
+            if epoch % 100 == 0 and epoch != 0:
                 print("Epoch: ", epoch)
                 model_scripted = torch.jit.script(model)
                 model_scripted.double()
@@ -218,6 +219,8 @@ def evaluate_model(test_dl, model):
     predictions, actuals = np.vstack(predictions), np.vstack(actuals)
 
     # calculate mse
+    print(actuals)
+    print(predictions)
     mse = mean_squared_error(actuals, predictions)
     std = np.std(actuals)
     return mse, std
@@ -246,7 +249,7 @@ def plot_model_predictions(dataset, model, RMSE):
     ax.set_xlabel("Time [ms]")
     ax.set_ylabel("Amplitude")
     ax.axhline(y=0, color='k')
-    ax.legend(["Position error [rad]","Measured torque [Nm]","Predicted torque [Nm]"])
+    ax.legend(["Sepoint [kRPM]","Measured Velocity [kRPM]","Predicted Velocity [kRPM]"])
     plt.title("Model Validation | RMSE: %f" % RMSE)
     plt.show()
 
@@ -262,14 +265,14 @@ def main():
         print("Using CPU D:")
 
     # Model parameters
-    h_len = 8
+    h_len = 7
 
     # Open training dataset
     dir_path = os.path.dirname(os.path.realpath(__file__))
     list_of_files = glob.glob(dir_path + '/../data/training/*.csv')
     list_of_files = sorted(list_of_files)
     list_of_files.reverse()
-    path = list_of_files[0]
+    path = list_of_files[1]
     print("Opening: ",path)
 
     # Prepare dataset
@@ -283,7 +286,7 @@ def main():
     os.makedirs(model_dir, exist_ok=True)
 
     # Train model
-    model = MLP(h_len, 1, dev, 32)
+    model = MLP(h_len+1, 1, dev, 32)
     model.to(torch.float64)
     train_model(train_dl, test_dl, model, dev, model_dir, lr=0.01)
 
