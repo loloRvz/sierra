@@ -22,6 +22,9 @@ from sklearn.metrics import mean_squared_error
 # Data columns
 TIME, SETPOINT, VELOCITY = range(3)
 
+MIN_RPM = 1500
+MAX_RPM = 9000
+MAX_RPM_PER_TICK = 20
 
 ### CLASSES ###
 
@@ -48,31 +51,42 @@ class CSVDataset(Dataset):
         ax.axhline(y=0, color='k')
         ax.set_xlabel("Time [s]")
         ax.set_ylabel("Amplitude")
-        ax.legend([ "Setpoint [RPM]", \
-                    "Velocity [RPM]"]) # \                      
-        plt.title("Motor data reading @400Hz")
+        ax.legend([ "Setpoint [kRPM]", \
+                    "Velocity [kRPM]"]) # \                      
+        plt.title("Motor data reading")
 
         plt.show()
+
+    # preprocess dataset
+    def preprocess(self):
+        data = self.df.to_numpy(dtype=np.float64)
+        data = data[500:,:] #Cut out ramp up time
+        data = data[data[:,VELOCITY] > 0]
+        self.df = pd.DataFrame(data, columns = self.df.columns.values, dtype=np.float32)
 
     # prepare inputs and labels for learning process
     def prepare_data(self,hist_len):
         data = self.df.to_numpy(dtype=np.float64)
-        data = data[100:,:]
 
         self.X = np.resize(self.X,(data.shape[0],hist_len+1))
 
-        #Get position error history
-        self.X[:,0] = np.roll(data[:,SETPOINT], 1)
-        for i in range(1,hist_len+1):
-            self.X[:,i] = np.roll(data[:,VELOCITY], i)
+        # Get input data
+        self.X[:,0] = data[:,SETPOINT]
+        for i in range(hist_len):
+            self.X[:,i+1] = np.roll(data[:,VELOCITY], i)
+        
+        # Get output data
+        self.y = np.roll(data[:,VELOCITY], -1) - data[:,VELOCITY]
 
-        self.y = data[:,VELOCITY]
+        # Cut out t<0
+        self.X = self.X[hist_len:-1,:] 
+        self.y = self.y[hist_len:-1]
 
-        self.X = self.X[hist_len:,:] #Cut out t<0
-        self.y = self.y[hist_len:] #Cut out t<0
+        print(np.max(self.y),np.argmax(self.y))
+        print(np.min(self.y),np.argmin(self.y))
 
         # Get corresponding times
-        self.t = data[hist_len:,TIME]#Cut out t<0
+        self.t = data[hist_len:-1,TIME] #Cut out t<0
 
     # get indexes for train and test rows
     def get_splits(self, n_test=0.1):
@@ -103,6 +117,10 @@ class MLP(Module):
         super(MLP, self).__init__()
         self.dev = dev
 
+        self.min_rpm = MIN_RPM
+        self.max_rpm = MAX_RPM
+        self.max_rpm_per_tick = MAX_RPM_PER_TICK
+
         # input to first hidden layer
         self.input_layer = Linear(n_inputs, layerDim).to(self.dev)
         xavier_uniform_(self.input_layer.weight).to(self.dev)
@@ -126,18 +144,23 @@ class MLP(Module):
 
     # forward propagate input
     def forward(self, X):
-        # input to first hidden layer
         X = X.to(self.dev)
+        # normalise
+        X = torch.sub(X,self.min_rpm)
+        X = torch.div(X,self.max_rpm)
+        # input to first hidden layer
         X = self.input_layer(X)
         X = self.act1(X)
-        # # second hidden layer
-        # X = self.hidden2(X)
-        # X = self.act2(X)
+        # second hidden layer
+        X = self.hidden1(X)
+        X = self.act2(X)
         # # third hidden layer
-        # X = self.hidden3(X)
-        # X = self.act3(X)
+        X = self.hidden2(X)
+        X = self.act3(X)
         # fifth hidden layer and output
         X = self.output_layer(X)
+        # denormalise
+        X *= self.max_rpm_per_tick
         return X
 
          
@@ -176,7 +199,7 @@ def train_model(train_dl, test_dl, model, dev, model_dir, lr):
             meanLossTest = 0
             stepsTest = 0
             for i, (inputs, targets) in enumerate(test_dl):
-                inputs, targets = inputs.to(dev), targets.to(dev).unsqueeze(1).float()
+                inputs, targets = inputs.to(dev), targets.to(dev).unsqueeze(1)
                 # compute the model output
                 yhat = model(inputs)
                 # calculate loss
@@ -196,7 +219,7 @@ def train_model(train_dl, test_dl, model, dev, model_dir, lr):
                 print("Epoch: ", epoch)
                 model_scripted = torch.jit.script(model)
                 model_scripted.double()
-                model_scripted.save(model_dir +  "/delta_" + str(epoch) + ".pt")
+                model_scripted.save(model_dir +  "/delta_" + str(epoch).zfill(4) + ".pt")
             # if epoch >= 300:
             #     break
             epoch = epoch + 1
@@ -219,8 +242,6 @@ def evaluate_model(test_dl, model):
     predictions, actuals = np.vstack(predictions), np.vstack(actuals)
 
     # calculate mse
-    print(actuals)
-    print(predictions)
     mse = mean_squared_error(actuals, predictions)
     std = np.std(actuals)
     return mse, std
@@ -265,18 +286,19 @@ def main():
         print("Using CPU D:")
 
     # Model parameters
-    h_len = 7
+    h_len = 6
 
     # Open training dataset
     dir_path = os.path.dirname(os.path.realpath(__file__))
     list_of_files = glob.glob(dir_path + '/../data/training/*.csv')
     list_of_files = sorted(list_of_files)
     list_of_files.reverse()
-    path = list_of_files[1]
+    path = list_of_files[0]
     print("Opening: ",path)
 
     # Prepare dataset
     dataset = CSVDataset(path)
+    dataset.preprocess()
     dataset.prepare_data(hist_len=h_len)
     train_dl, test_dl = dataset.get_splits(n_test=0.1) # Get data loaders
 
@@ -288,7 +310,7 @@ def main():
     # Train model
     model = MLP(h_len+1, 1, dev, 32)
     model.to(torch.float64)
-    train_model(train_dl, test_dl, model, dev, model_dir, lr=0.01)
+    train_model(train_dl, test_dl, model, dev, model_dir, lr=0.0001)
 
     # Evaluate model
     mse,std = evaluate_model(test_dl, model)

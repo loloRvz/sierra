@@ -52,12 +52,6 @@ int main(int argc, char ** argv) {
 	esc_adapter_ = std::make_shared<omV::ll::VESCUartMotorAdapter>(adapter);
 	esc_adapter_->open();
 
-	// auto dummy_rc = std::make_shared<omV::mock::MemoryRCReceiverAdapter>();
-	// auto arming_logic = std::make_shared<omV::mock::MemoryArmingLogic>();
-	// arming_logic->arm(); 
-	// ms_client_.setInterface(esc_adapter_, dummy_rc, arming_logic);
-	// ms_client_.start();
-
 	omV::ll::MotorInterface<omV::ll::MotorType::VEL>::MotorStatusArray motor_read;
 
 	// Create filename for exprmt data
@@ -78,8 +72,8 @@ int main(int argc, char ** argv) {
 	std::ofstream myfile;
 	myfile.open(file_str);
 	myfile << "time[s],"
-			  "setpoint[kRPM],"
-			  "velocity[kRPM]\n"; // Set column descriptions
+			  "setpoint[RPM],"
+			  "velocity[RPM]\n"; // Set column descriptions
 
 	// Wait for first setpoint topic to be published
 	ros::topic::waitForMessage<std_msgs::Float32>(setpoint_topic_,ros::Duration(5));
@@ -95,15 +89,13 @@ int main(int argc, char ** argv) {
 
 		// Read motor data & write setpoint
 		esc_adapter_->write({vs.getSetPoint()});
-		//esc_adapter_->write({2000});
-		//ms_client_.setFullState({vs.getSetPoint()});
 		motor_read = esc_adapter_->read();
 
 		// Write data to csv file
-		sprintf(data_str, "%10.6f,%07.2f,%07ld\n",
+		sprintf(data_str, "%10.6f,%2.5f,%2.5f\n",
 			duration_cast<microseconds>(t_now - t_start).count()/1e6,
-			vs.getSetPoint() / 1000, 
-			motor_read[0].stamp/7 / 1000);
+			vs.getSetPoint(), 
+			(float)motor_read[0].stamp / 7);
 		myfile << data_str;
 
 		// Loop
