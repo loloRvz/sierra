@@ -10,12 +10,12 @@ def main():
     # Directory of this file
     dir_path = os.path.dirname(os.path.realpath(__file__))
     # Load trained model
-    model_dirs = dir_path + "/../data/models/" + "23-06-12--12-53-45_step-PHL06/"
+    model_dirs = dir_path + "/../data/models/" + "23-06-19--16-39-09_mixd-PHL07_denorm/"
     list_of_models = glob.glob(model_dirs + '*.pt')
     list_of_models = sorted(list_of_models)
 
     # Model parameters
-    h_len = 6
+    h_len = 7
 
     # Small simulation
     T1 = 0      # [s]
@@ -62,6 +62,8 @@ def main():
 
     legend = ["Epoch %d"%((i+1)*100) for i in range(len(list_of_models))]
     legend.insert(0,"Setpoint")
+    plt.hlines(RPM_MIN,T1,T2)
+    plt.hlines(RPM_MAX,T1,T2)
     plt.xlabel("Time [s]")
     plt.ylabel("Velocity [RPM]")
     plt.legend(legend)

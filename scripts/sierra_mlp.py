@@ -45,14 +45,13 @@ class CSVDataset(Dataset):
         data = self.df.to_numpy()
 
         fig,ax=plt.subplots()
-        #ax.plot(data[:,TIME],data[:,SETPOINT:ACCELERATION_COMP+1])
         ax.plot(data[:,TIME],data[:,SETPOINT])
         ax.plot(data[:,TIME],data[:,VELOCITY])
         ax.axhline(y=0, color='k')
         ax.set_xlabel("Time [s]")
         ax.set_ylabel("Amplitude")
-        ax.legend([ "Setpoint [kRPM]", \
-                    "Velocity [kRPM]"]) # \                      
+        ax.legend([ "Setpoint [RPM]", \
+                    "Velocity [RPM]"]) # \                      
         plt.title("Motor data reading")
 
         plt.show()
@@ -81,9 +80,6 @@ class CSVDataset(Dataset):
         # Cut out t<0
         self.X = self.X[hist_len:-1,:] 
         self.y = self.y[hist_len:-1]
-
-        print(np.max(self.y),np.argmax(self.y))
-        print(np.min(self.y),np.argmin(self.y))
 
         # Get corresponding times
         self.t = data[hist_len:-1,TIME] #Cut out t<0
@@ -147,7 +143,7 @@ class MLP(Module):
         X = X.to(self.dev)
         # normalise
         X = torch.sub(X,self.min_rpm)
-        X = torch.div(X,self.max_rpm)
+        X = torch.div(X,self.max_rpm-self.min_rpm)
         # input to first hidden layer
         X = self.input_layer(X)
         X = self.act1(X)
@@ -286,7 +282,7 @@ def main():
         print("Using CPU D:")
 
     # Model parameters
-    h_len = 6
+    h_len = 7
 
     # Open training dataset
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -303,7 +299,7 @@ def main():
     train_dl, test_dl = dataset.get_splits(n_test=0.1) # Get data loaders
 
     # Make dir for model
-    model_dir = "../data/models/"+os.path.basename(path)[:-4]+"-PHL"+str(h_len).zfill(2)
+    model_dir = "../data/models/"+os.path.basename(path)[:-4]+"-PHL"+str(h_len).zfill(2)+"_denorm"
     print("Opening directory: ",model_dir)
     os.makedirs(model_dir, exist_ok=True)
 
