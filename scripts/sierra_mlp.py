@@ -60,7 +60,7 @@ class CSVDataset(Dataset):
     def preprocess(self):
         data = self.df.to_numpy(dtype=np.float64)
         data = data[500:,:] #Cut out ramp up time
-        data = data[data[:,VELOCITY] > 0]
+        data = data[data[:,VELOCITY] > 1000]
         self.df = pd.DataFrame(data, columns = self.df.columns.values, dtype=np.float32)
 
     # prepare inputs and labels for learning process

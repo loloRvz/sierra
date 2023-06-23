@@ -47,7 +47,7 @@ def main():
     print("RMSE")
     print("Real system ",rmse[0], "(setpoints:",rmse_set[0],")")
     print("Low-Pass Filter",int(rmse[1]), "(setpoints:",int(rmse_set[1]),")")
-    print("NN Model",int(rmse[2]), "(setpoints:",int(rmse_set[2]),")")
+    #print("NN Model",int(rmse[2]), "(setpoints:",int(rmse_set[2]),")")
 
     signals = ["Setpoint","Real system","Low Pass Filter","NN Model"]
 
