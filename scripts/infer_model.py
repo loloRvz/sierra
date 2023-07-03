@@ -10,7 +10,7 @@ def main():
     # Directory of this file
     dir_path = os.path.dirname(os.path.realpath(__file__))
     # Load trained model
-    model_dirs = dir_path + "/../data/models/" + "23-06-19--16-39-09_mixd-PHL07_denorm/"
+    model_dirs = dir_path + "/../data/models/" + "23-06-23--11-40-58_mixd-PHL07_denorm/"
     list_of_models = glob.glob(model_dirs + '*.pt')
     list_of_models = sorted(list_of_models)
 
@@ -23,7 +23,7 @@ def main():
     F = 200     # [Hz]
     N = (T2-T1)*F
     SET = 6000     # [kRPM]
-    START = 5000  # [kRPM]
+    START = 1500  # [kRPM]
 
     # Generate randomly varying step input
     rand_inputs = np.random.normal(0, RAMP_VAR, DATA_LENGTH*RAMP_FREQ)
