@@ -9,9 +9,10 @@ import math
 def main():
     # Get all datasets
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    list_of_files = glob.glob(dir_path + '/../data/evaluation/5-mixd/*.csv')
+    list_of_files = glob.glob(dir_path + '/../data/evaluation/0-step/*.csv')
     list_of_files = sorted(list_of_files)
     #list_of_files.reverse()
+    
     
 
     # Load data from files
@@ -32,11 +33,12 @@ def main():
 
 
     # Sync measurements times
-    min_time = min([times_arr[-1] for times_arr in times])
+    min_time = 4
+    max_time = min([times_arr[-1] for times_arr in times]) -1
 
-    velocities = [velocities[i][min_time > times[i]]  for i in range(len(velocities))]
-    setpoints = [setpoints[i][min_time > times[i]]  for i in range(len(velocities))]
-    times = [times[i][min_time > times[i]]  for i in range(len(velocities))]
+    velocities = [velocities[i][np.logical_and(min_time < times[i],times[i] < max_time)]  for i in range(len(velocities))]
+    setpoints = [setpoints[i][np.logical_and(min_time < times[i],times[i] < max_time)]  for i in range(len(velocities))]
+    times = [times[i][np.logical_and(min_time < times[i],times[i] < max_time)]  for i in range(len(velocities))]
 
     velocities_interp = [np.interp(times[0], times[i], velocities[i]) for i in range(len(velocities))]
     setpoints_interp = [np.interp(times[0], times[i], setpoints[i]) for i in range(len(setpoints))]
@@ -47,7 +49,7 @@ def main():
     print("RMSE")
     print("Real system ",rmse[0], "(setpoints:",rmse_set[0],")")
     print("Low-Pass Filter",int(rmse[1]), "(setpoints:",int(rmse_set[1]),")")
-    #print("NN Model",int(rmse[2]), "(setpoints:",int(rmse_set[2]),")")
+    print("NN Model",int(rmse[2]), "(setpoints:",int(rmse_set[2]),")")
 
     signals = ["Setpoint","Real system","Low Pass Filter","NN Model"]
 

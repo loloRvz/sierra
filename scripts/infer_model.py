@@ -10,12 +10,12 @@ def main():
     # Directory of this file
     dir_path = os.path.dirname(os.path.realpath(__file__))
     # Load trained model
-    model_dirs = dir_path + "/../data/models/" + "23-06-23--11-40-58_mixd-PHL07_denorm/"
+    model_dirs = dir_path + "/../data/models/" + "23-06-23--11-40-58_mixd-PHL05/"
     list_of_models = glob.glob(model_dirs + '*.pt')
     list_of_models = sorted(list_of_models)
 
     # Model parameters
-    h_len = 7
+    h_len = 5
 
     # Small simulation
     T1 = 0      # [s]
@@ -25,27 +25,27 @@ def main():
     SET = 6000     # [kRPM]
     START = 1500  # [kRPM]
 
-    # Generate randomly varying step input
-    rand_inputs = np.random.normal(0, RAMP_VAR, DATA_LENGTH*RAMP_FREQ)
-    rand_inputs[0] = RPM_START
-    A = linalg.toeplitz( np.ones(rand_inputs.size), np.insert(np.zeros(rand_inputs.size-1),0,1) )
-    rand_inputs = np.matmul(A,rand_inputs)
-    rand_inputs = limit_signal(rand_inputs)
-    step_inputs = np.repeat(rand_inputs, CTRL_FREQ/STEP_FREQ)
-
+    # Get input signal
+    input_type = MIXD
+    input_df = pd.read_csv("../data/input_signals/signals.csv", dtype=np.float64)
+    input_np = input_df.to_numpy(dtype=np.float64)
+    setpoint = input_np[:N,input_type]
     time = np.linspace(T1,T2, N)
-    setpoint = step_inputs[:N]
 
+    # Init plot
     plt.figure(1)
     plt.plot(time,setpoint,"--")
 
+    # Open all models
     for model_dir in list_of_models:
         print("Opening model:", model_dir)
         model = torch.jit.load(model_dir)
 
+        # Init state
         velocity = np.zeros(time.shape)
         state = np.ones(h_len)*START
 
+        # Simulate response
         for i in range(N):
             velocity[i] = state[0]
 

@@ -299,7 +299,7 @@ def main():
     train_dl, test_dl = dataset.get_splits(n_test=0.1) # Get data loaders
 
     # Make dir for model
-    model_dir = "../data/models/"+os.path.basename(path)[:-4]+"-PHL"+str(h_len).zfill(2)+"_denorm"
+    model_dir = "../data/models/"+os.path.basename(path)[:-4]+"-PHL"+str(h_len).zfill(2)
     print("Opening directory: ",model_dir)
     os.makedirs(model_dir, exist_ok=True)
 

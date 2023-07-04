@@ -31,7 +31,7 @@ RAMP_VAR = 1000     # [RPM]
 
 # Chirp input 
 CHRP_STEP_FREQ = 0.5
-CHRP_AMPL = 500                # [Rad]
+CHRP_AMPL = 100                # [Rad]
 CHRP_FREQ1 = 0.05 *2*math.pi   # [Rad/s]
 CHRP_FREQ2 =   15 *2*math.pi   # [Rad/s]
 CHRP_PERIOD = 1                # [s]
@@ -45,7 +45,7 @@ FLIT_FILE = "/../data/flight_data/aggressive.csv"
 
 # Mixed input containing all types of data input
 MIXD_INTERVAL = 5  # [s]
-MIXD_MIX = [STEP,RAMP,CHRP,FLIT,NOIS]
+MIXD_MIX = [STEP,RAMP,CHRP,FLIT]
 
 
 
