@@ -9,7 +9,7 @@ import math
 def main():
     # Get all datasets
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    list_of_files = glob.glob(dir_path + '/../data/evaluation/0-step/*.csv')
+    list_of_files = glob.glob(dir_path + '/../data/evaluation/6-mixd-lowchrp/*.csv')
     list_of_files = sorted(list_of_files)
     #list_of_files.reverse()
     
@@ -33,8 +33,8 @@ def main():
 
 
     # Sync measurements times
-    min_time = 4
-    max_time = min([times_arr[-1] for times_arr in times]) -1
+    min_time = 2.5
+    max_time = min([times_arr[-1] for times_arr in times])
 
     velocities = [velocities[i][np.logical_and(min_time < times[i],times[i] < max_time)]  for i in range(len(velocities))]
     setpoints = [setpoints[i][np.logical_and(min_time < times[i],times[i] < max_time)]  for i in range(len(velocities))]
@@ -51,7 +51,7 @@ def main():
     print("Low-Pass Filter",int(rmse[1]), "(setpoints:",int(rmse_set[1]),")")
     print("NN Model",int(rmse[2]), "(setpoints:",int(rmse_set[2]),")")
 
-    signals = ["Setpoint","Real system","Low Pass Filter","NN Model"]
+    signals = ["Setpoint","Real system","PD Model","NN Model"]
 
     # Plot signals
     plt.figure(1,figsize=(7,5))

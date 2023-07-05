@@ -10,16 +10,16 @@ def main():
     # Directory of this file
     dir_path = os.path.dirname(os.path.realpath(__file__))
     # Load trained model
-    model_dirs = dir_path + "/../data/models/" + "23-06-23--11-40-58_mixd-PHL05/"
+    model_dirs = dir_path + "/../data/models/" + "23-07-04--09-08-11_mixd_lowchrp-PHL07/"
     list_of_models = glob.glob(model_dirs + '*.pt')
     list_of_models = sorted(list_of_models)
 
     # Model parameters
-    h_len = 5
+    h_len = 7
 
     # Small simulation
     T1 = 0      # [s]
-    T2 = 30     # [s]
+    T2 = 60     # [s]
     F = 200     # [Hz]
     N = (T2-T1)*F
     SET = 6000     # [kRPM]

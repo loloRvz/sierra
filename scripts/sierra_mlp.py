@@ -282,14 +282,14 @@ def main():
         print("Using CPU D:")
 
     # Model parameters
-    h_len = 7
+    h_len = 5
 
     # Open training dataset
     dir_path = os.path.dirname(os.path.realpath(__file__))
     list_of_files = glob.glob(dir_path + '/../data/training/*.csv')
     list_of_files = sorted(list_of_files)
     list_of_files.reverse()
-    path = list_of_files[1]
+    path = list_of_files[0]
     print("Opening: ",path)
 
     # Prepare dataset
