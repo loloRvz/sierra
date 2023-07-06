@@ -9,7 +9,7 @@ import math
 def main():
     # Get all datasets
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    list_of_files = glob.glob(dir_path + '/../data/evaluation/6-mixd-lowchrp/*.csv')
+    list_of_files = glob.glob(dir_path + '/../data/evaluation/5-mixd/*.csv')
     list_of_files = sorted(list_of_files)
     #list_of_files.reverse()
     
@@ -47,11 +47,13 @@ def main():
     rmse_set = [math.sqrt(mean_squared_error(setpoints_interp[0], s)) for s in setpoints_interp]
 
     print("RMSE")
-    print("Real system ",rmse[0], "(setpoints:",rmse_set[0],")")
-    print("Low-Pass Filter",int(rmse[1]), "(setpoints:",int(rmse_set[1]),")")
-    print("NN Model",int(rmse[2]), "(setpoints:",int(rmse_set[2]),")")
+    for i in range(len(velocities)):
+        print("Signal: ",list_of_files[i][-10:],", RMSE: ",rmse[i], "(setpoints:",rmse_set[i],")")
 
     signals = ["Setpoint","Real system","PD Model","NN Model"]
+
+    leg = [path[-8:-4] for path in list_of_files]
+    leg.insert(0,"Setpoint")
 
     # Plot signals
     plt.figure(1,figsize=(7,5))
@@ -61,7 +63,8 @@ def main():
     plt.axhline(y=0, color='k')
     plt.xlabel("Time [s]")
     plt.ylabel("Velocity [RPM]")
-    plt.legend(signals)                       
+    # plt.legend(signals) 
+    plt.legend(leg)                         
     plt.title("Velocity control comparison")
 
     # plt.figure(2,figsize=(7,5))
