@@ -10,7 +10,7 @@ def main():
     # Directory of this file
     dir_path = os.path.dirname(os.path.realpath(__file__))
     # Load trained model
-    model_dirs = dir_path + "/../data/models/" + "23-07-04--09-08-11_mixd-PHL05new/"
+    model_dirs = dir_path + "/../data/models/" + "23-07-04--09-08-11_mixd-PHL05reduced/"
     list_of_models = glob.glob(model_dirs + '*.pt')
     list_of_models = sorted(list_of_models)
 
@@ -23,7 +23,7 @@ def main():
     F = 200     # [Hz]
     N = (T2-T1)*F
     SET = 6000     # [kRPM]
-    START = 3000  # [kRPM]
+    START = 1000  # [kRPM]
 
     # Get input signal
     input_type = MIXD
