@@ -144,16 +144,16 @@ class MLP(Module):
         # normalise
         X = torch.sub(X,self.min_rpm)
         X = torch.div(X,self.max_rpm-self.min_rpm)
-        # input to first hidden layer
+        # input layer
         X = self.input_layer(X)
         X = self.act1(X)
-        # second hidden layer
+        # first hidden layer
         X = self.hidden1(X)
         X = self.act2(X)
-        # # third hidden layer
-        X = self.hidden2(X)
-        X = self.act3(X)
-        # fifth hidden layer and output
+        # second hidden layer
+        # X = self.hidden2(X)
+        # X = self.act3(X)
+        # output layer
         X = self.output_layer(X)
         # denormalise
         X *= self.max_rpm_per_tick
@@ -282,7 +282,7 @@ def main():
         print("Using CPU D:")
 
     # Model parameters
-    h_len = 6
+    h_len = 5
 
     # Open training dataset
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -299,7 +299,7 @@ def main():
     train_dl, test_dl = dataset.get_splits(n_test=0.1) # Get data loaders
 
     # Make dir for model
-    model_dir = "../data/models/"+os.path.basename(path)[:-4]+"-PHL"+str(h_len).zfill(2)+"new"
+    model_dir = "../data/models/"+os.path.basename(path)[:-4]+"-PHL"+str(h_len).zfill(2)+"reduced"
     print("Opening directory: ",model_dir)
     os.makedirs(model_dir, exist_ok=True)
 

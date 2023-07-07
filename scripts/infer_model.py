@@ -19,7 +19,7 @@ def main():
 
     # Small simulation
     T1 = 0      # [s]
-    T2 = 60     # [s]
+    T2 = 30     # [s]
     F = 200     # [Hz]
     N = (T2-T1)*F
     SET = 6000     # [kRPM]
