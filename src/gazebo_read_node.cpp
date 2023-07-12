@@ -97,7 +97,7 @@ int main(int argc, char ** argv) {
 		actual_veloctiy = vg.getPos();
 
 		// Write data to csv file
-		sprintf(data_str, "%10.6f,%2.5f,%2.5f\n",
+		sprintf(data_str, "%10.5f,%2.1f,%2.1f\n",
 			(t_now - t_start).toSec(),
 			set_point_velocity, 
 			actual_veloctiy);

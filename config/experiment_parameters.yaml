@@ -1,5 +1,5 @@
 control_frequency: 200      # Frequency of input signal to motor (should be 200 Hz)
 sample_frequency: 200       # Frequency at which the motor data is read
 
-input_type: 5               # 0: 'step' | 1: 'ramp' | 2: 'chrp' | 3: 'flit' | 4: 'nois' | 5: 'mixd' 
+input_type: 6               # 0: 'step' | 1: 'ramp' | 2: 'chrp' | 3: 'flit' | 4: 'nois' | 5: 'mixd' 
 

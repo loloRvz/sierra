@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import os, glob
 
 import torch
+import torch.nn as nn
 from torch.nn.init import xavier_uniform_
 from torch.nn import MSELoss
 from torch.optim import SGD
@@ -107,65 +108,35 @@ class CSVDataset(Dataset):
         return [self.X[idx], self.y[idx]]
 
 # model definition
-class MLP(Module):
+class RNN(Module):
     # define model elements
-    def __init__(self, n_inputs, n_outputs, dev, layerDim):
-        super(MLP, self).__init__()
+    def __init__(self, input_dim, output_dim, hidden_dim, layer_num, dev):
+        super(RNN, self).__init__()
         self.dev = dev
 
         self.min_rpm = MIN_RPM
         self.max_rpm = MAX_RPM
         self.max_rpm_per_tick = MAX_RPM_PER_TICK
 
-        # input layer
-        self.input_layer = Linear(n_inputs, layerDim).to(self.dev)
-        xavier_uniform_(self.input_layer.weight).to(self.dev)
-        self.act1 = Softsign().to(self.dev)
+        self.hidden_dim = hidden_dim
+        self.layer_num = layer_num
 
-        # first hidden layer
-        self.hidden1 = Linear(layerDim, layerDim).to(self.dev)
-        xavier_uniform_(self.hidden1.weight).to(self.dev)
-        self.act2 = Softsign().to(self.dev)
+        self.rnn = nn.RNN(input_dim, hidden_dim, layer_num, batch_first=True, nonlinearity='relu')
+        self.fc = Linear(hidden_dim, output_dim)
 
-        # second hidden layer
-        self.hidden2 = Linear(layerDim, layerDim).to(self.dev)
-        xavier_uniform_(self.hidden2.weight).to(self.dev)
-        self.act3 = Softsign().to(self.dev)
-
-        # third hidden layer
-        self.hidden3 = Linear(layerDim, layerDim).to(self.dev)
-        xavier_uniform_(self.hidden3.weight).to(self.dev)
-        self.act4 = Softsign().to(self.dev)
-
-        # output
-        self.output_layer = Linear(layerDim, n_outputs).to(self.dev)
-        xavier_uniform_(self.output_layer.weight).to(self.dev)
-        
         self.to(torch.float64)
 
     # forward propagate input
     def forward(self, X):
+        h = torch.zeros(self.layer_num, X.size(0), self.hidden_dim).requires_grad_()
+
         X = X.to(self.dev)
-        # normalise
         X = torch.sub(X,self.min_rpm)
         X = torch.div(X,self.max_rpm-self.min_rpm)
-        # input layer
-        X = self.input_layer(X)
-        X = self.act1(X)
-        # first hidden layer
-        X = self.hidden1(X)
-        X = self.act2(X)
-        # second hidden layer
-        X = self.hidden2(X)
-        X = self.act3(X)
-        # second hidden layer
-        X = self.hidden3(X)
-        X = self.act4(X)
-        # output layer
-        X = self.output_layer(X)
-        # denormalise
-        X *= self.max_rpm_per_tick
-        return X
+
+        outp, hx = self.rnn(X, h.detach())
+        outp = self.fc(outp[:, -1, :]) 
+        return outp
 
          
 ### FUNCTIONS ###
@@ -186,6 +157,7 @@ def train_model(train_dl, test_dl, model, dev, model_dir, lr):
             # enumerate mini batches
             for inputs, targets in train_dl:
                 inputs, targets = inputs.to(dev), targets.to(dev).unsqueeze(1)
+                model.train()
                 # clear the gradients
                 optimizer.zero_grad()
                 # compute the model output
@@ -196,8 +168,8 @@ def train_model(train_dl, test_dl, model, dev, model_dir, lr):
                 loss.backward()
                 # update model weights
                 optimizer.step()
-                meanLoss = meanLoss + loss
-                steps = steps + 1
+                meanLoss += loss
+                steps += 1
 
             # Compute loss on test dataset
             meanLossTest = 0
@@ -224,8 +196,8 @@ def train_model(train_dl, test_dl, model, dev, model_dir, lr):
                 model_scripted = torch.jit.script(model)
                 model_scripted.double()
                 model_scripted.save(model_dir +  "/delta_" + str(epoch).zfill(4) + ".pt")
-            # if epoch >= 2000:
-            #     break
+            if epoch >= 2000:
+                break
             epoch = epoch + 1
     except KeyboardInterrupt:
         print('interrupted!')
@@ -290,7 +262,7 @@ def main():
         print("Using CPU D:")
 
     # Model parameters
-    h_len = 5
+    h_len = 7
 
     # Open training dataset
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -304,17 +276,17 @@ def main():
     dataset = CSVDataset(path)
     dataset.preprocess()
     dataset.prepare_data(hist_len=h_len)
-    train_dl, test_dl = dataset.get_splits(n_test=0.0001) # Get data loaders
+    train_dl, test_dl = dataset.get_splits(n_test=0.1) # Get data loaders
 
     # Make dir for model
-    model_dir = "../data/models/"+os.path.basename(path)[:-4]+"-PHL"+str(h_len).zfill(2)
+    model_dir = "../data/models/"+os.path.basename(path)[:-4]+"-PHL"+str(h_len).zfill(2)+"RNN"
     print("Opening directory: ",model_dir)
     os.makedirs(model_dir, exist_ok=True)
 
     # Train model
-    model = MLP(h_len+1, 1, dev, 32)
+    model = RNN(input_dim=h_len+1, output_dim=1, hidden_dim=32, layer_num=2, dev=dev)
     model.to(torch.float64)
-    train_model(train_dl, test_dl, model, dev, model_dir, lr=0.0002)
+    train_model(train_dl, test_dl, model, dev, model_dir, lr=0.0001)
 
     # Evaluate model
     mse,std = evaluate_model(test_dl, model)

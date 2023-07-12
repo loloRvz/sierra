@@ -92,7 +92,7 @@ int main(int argc, char ** argv) {
 		motor_read = esc_adapter_->read();
 
 		// Write data to csv file
-		sprintf(data_str, "%10.6f,%2.5f,%2.5f\n",
+		sprintf(data_str, "%10.5f,%2.1f,%2.1f\n",
 			duration_cast<microseconds>(t_now - t_start).count()/1e6,
 			vs.getSetPoint(), 
 			(float)motor_read[0].stamp / 7);
