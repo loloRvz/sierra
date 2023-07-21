@@ -9,7 +9,7 @@ import math
 def main():
     # Get all datasets
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    list_of_files = glob.glob(dir_path + '/../data/evaluation/0-step/*.csv')
+    list_of_files = glob.glob(dir_path + '/../data/evaluation/5-mixd/*.csv')
     list_of_files = sorted(list_of_files)
     #list_of_files.reverse()
     
@@ -58,7 +58,9 @@ def main():
     plt.figure(1,figsize=(7,5))
     plt.plot(times[0],setpoints[0],"--")
     for i in range(len(velocities)):
-        plt.plot(times[0],velocities_interp[i])
+        plt.plot(times[0],setpoints_interp[i])
+    for i in range(1,len(velocities)):
+        plt.plot(times[0],errors_interp[i],"--",color="C"+str(i+1))
         
     leg = ["Setpoint"]
     leg.extend(signal_names)

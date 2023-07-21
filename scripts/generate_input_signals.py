@@ -12,7 +12,7 @@ from scipy import linalg
 
 
 ## INPUT SIGNAL PARAMETERS ##
-STEP, RAMP, CHRP, FLIT, NOIS, MIXD = range(6)
+STEP, RAMP, CHRP, FLIT, NOIS, MIXD, FLITREAL = range(7)
 
 # General
 DATA_LENGTH = 1000   # [s]
@@ -24,14 +24,14 @@ RPM_START = RPM_MIN + (RPM_MAX-RPM_MIN)/2   # [RPM]
 
 # Step input
 STEP_FREQ = 1       # [Hz]
+STEP_VAR = 500      # [RMP]
 
 # Ramp input
 RAMP_FREQ = 1       # [Hz]
-RAMP_VAR = 1000     # [RPM]
 
 # Chirp input 
 CHRP_STEP_FREQ = 0.5
-CHRP_AMPL = 100                # [Rad]
+CHRP_AMPL = 20                # [Rad]
 CHRP_FREQ1 = 0.05 *2*math.pi   # [Rad/s]
 CHRP_FREQ2 =   15 *2*math.pi   # [Rad/s]
 CHRP_PERIOD = 1                # [s]
@@ -45,7 +45,7 @@ FLIT_FILE = "/../data/flight_data/aggressive.csv"
 
 # Mixed input containing all types of data input
 MIXD_INTERVAL = 5  # [s]
-MIXD_MIX = [STEP,RAMP,CHRP,FLIT]
+MIXD_MIX = [RAMP,CHRP,FLIT]
 
 
 
@@ -68,7 +68,7 @@ def main():
     df = pd.DataFrame()
 
     # Compute random input
-    rand_inputs = np.random.normal(0, RAMP_VAR, DATA_LENGTH*RAMP_FREQ)
+    rand_inputs = np.random.normal(0, STEP_VAR, DATA_LENGTH*RAMP_FREQ)
     rand_inputs[0] = RPM_START
     A = linalg.toeplitz( np.ones(rand_inputs.size), np.insert(np.zeros(rand_inputs.size-1),0,1) )
     rand_inputs = np.matmul(A,rand_inputs)

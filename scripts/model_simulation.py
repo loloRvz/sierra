@@ -10,11 +10,11 @@ def main():
     # Directory of this file
     dir_path = os.path.dirname(os.path.realpath(__file__))
     # Load trained model
-    model_dir = dir_path + "/../data/models/" + "23-07-04--09-08-11_mixd-PHL13"
-    epochs = "/delta_2000.pt"
+    model_dir = dir_path + "/../data/models/" + "23-07-05--15-01-21_flit_real-PHL05"
+    epochs = "/delta_6000.pt"
 
     # Model parameters
-    h_len = 13
+    h_len = 5
     
     # Small simulation
     T1 = 0      # [s]

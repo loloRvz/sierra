@@ -158,9 +158,9 @@ class MLP(Module):
         # second hidden layer
         X = self.hidden2(X)
         X = self.act3(X)
-        # second hidden layer
-        X = self.hidden3(X)
-        X = self.act4(X)
+        # third hidden layer
+        # X = self.hidden3(X)
+        # X = self.act4(X)
         # output layer
         X = self.output_layer(X)
         # denormalise
@@ -215,11 +215,11 @@ def train_model(train_dl, test_dl, model, dev, model_dir, lr):
             writer.add_scalar('Loss/train', meanLoss, epoch)
 
             meanLossTest = meanLossTest/stepsTest
-            writer.add_scalar('Loss/test', meanLossTest, epoch)
+            writer.add_scalar('Loss/eval', meanLossTest, epoch)
             
-            if epoch % 10 == 0 and epoch != 0:
+            if epoch % 10 == 0 and epoch != 0: 
                 print("Epoch: ", epoch)
-            if epoch % 100 == 0 and epoch != 0:
+            if ( (epoch < 100 and epoch % 10 == 0) or (epoch % 100 == 0) ) and epoch != 0:
                 print("Epoch: ", epoch)
                 model_scripted = torch.jit.script(model)
                 model_scripted.double()
@@ -307,7 +307,7 @@ def main():
     train_dl, test_dl = dataset.get_splits(n_test=0.0001) # Get data loaders
 
     # Make dir for model
-    model_dir = "../data/models/"+os.path.basename(path)[:-4]+"-PHL"+str(h_len).zfill(2)
+    model_dir = "../data/models/"+os.path.basename(path)[:-4]+"-PHL"+str(h_len).zfill(2)+"_2hid32"
     print("Opening directory: ",model_dir)
     os.makedirs(model_dir, exist_ok=True)
 
