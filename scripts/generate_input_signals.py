@@ -18,13 +18,13 @@ STEP, RAMP, CHRP, FLIT, NOIS, MIXD, FLITREAL = range(7)
 DATA_LENGTH = 1000   # [s]
 CTRL_FREQ = 200     # [Hz]
 
-RPM_MIN = 1500      # [RPM]
-RPM_MAX = 8500      # [RPM]
+RPM_MIN = 5000      # [RPM]
+RPM_MAX = 7000      # [RPM]
 RPM_START = RPM_MIN + (RPM_MAX-RPM_MIN)/2   # [RPM]
 
 # Step input
 STEP_FREQ = 1       # [Hz]
-STEP_VAR = 500      # [RMP]
+STEP_VAR = 250      # [RMP]
 
 # Ramp input
 RAMP_FREQ = 1       # [Hz]
@@ -45,7 +45,7 @@ FLIT_FILE = "/../data/flight_data/aggressive.csv"
 
 # Mixed input containing all types of data input
 MIXD_INTERVAL = 5  # [s]
-MIXD_MIX = [RAMP,CHRP,FLIT]
+MIXD_MIX = [CHRP,FLIT]
 
 
 
@@ -103,7 +103,6 @@ def main():
     nois_inputs = ramp_inputs + np.random.rand(DATA_LENGTH*CTRL_FREQ) * 2*NOIS_VARIANCE - NOIS_VARIANCE
     nois_inputs = limit_signal(nois_inputs)
     df["nois"] = pd.DataFrame(nois_inputs)
-
 
     # Compute mixed types input
     inputs_array = df.to_numpy()

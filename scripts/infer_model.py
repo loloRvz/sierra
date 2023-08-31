@@ -13,16 +13,15 @@ def main():
 
     # Params
     T1 = 0          # [s]
-    T2 = 60         # [s]
+    T2 = 55         # [s]
     F = 200         # [Hz]
     N = (T2-T1)*F   # []
-    SET = 6000      # [kRPM]
     START = 4000    # [kRPM]
 
     # Input signal
-    input_type = MIXD
-    input_df = pd.read_csv("../data/input_signals/signals.csv", dtype=np.float64)
-    input_np = input_df.to_numpy(dtype=np.float64)
+    input_type = FLITREAL
+    input_dataset = CSVDataset("../data/input_signals/signals.csv")
+    input_np = input_dataset.df.to_numpy(dtype=np.float64)
     setpoint = input_np[:N,input_type]
     time = np.linspace(T1,T2, N)
 
@@ -39,13 +38,16 @@ def main():
     eval_data_dirs = ["0-step","1-ramp","2-chrp","3-flit","4-nois","5-mixd","6-flitreal"]
     eval_data_path = sorted(glob.glob("../data/evaluation/" + eval_data_dirs[input_type] + "/*.csv"))[0]
     print("Opening measurement data: ", eval_data_path)
-    real_data = pd.read_csv(eval_data_path, dtype=np.float64).to_numpy()
+    eval_dataset = CSVDataset(eval_data_path)
+    eval_dataset.preprocess()
+    eval_np = eval_dataset.df.to_numpy(dtype=np.float64)
+    # setpoint = eval_np[:N,SETPOINT]
 
     # Save data to arrays
     signal_names.append("Measurement")
-    times.append(real_data[:,TIME])
-    setpoints.append(real_data[:,SETPOINT])
-    velocities.append(real_data[:,VELOCITY])
+    times.append(eval_np[:,TIME])
+    setpoints.append(eval_np[:,SETPOINT])
+    velocities.append(eval_np[:,VELOCITY])
 
 
     ### P-CONTROLLER ###
@@ -70,7 +72,7 @@ def main():
         prev_vel = velocity[i] + cmd
 
     # Save data to arrays
-    signal_names.append("P-Controller")
+    signal_names.append("P Model")
     times.append(time)
     setpoints.append(setpoint)
     velocities.append(velocity)
@@ -79,15 +81,15 @@ def main():
     ### NEURAL NETWORK MODEL ###
 
     # Load pre-trained model
-    model_dirs = dir_path + "/../data/models/" + "23-07-14--09-45-56_flit-PHL05_2hid32/delta_9700"
+    model_dirs = dir_path + "/../data/models/" + "23-07-27--16-14-41_flit-PHL05_2hid32/delta_8000"
     list_of_models = glob.glob(model_dirs + '*.pt')
     list_of_models = sorted(list_of_models)
 
-    # Model parameters
+    # Model parameter
     h_len = 5
 
     # Simulate all models
-    for model_dir in list_of_models[:200]:
+    for model_dir in list_of_models[:]:
         print("Opening model:", model_dir[-43:])
         model = torch.jit.load(model_dir)
 
@@ -144,21 +146,22 @@ def main():
         print("Signal: ",signal_names[i],", RMSE: ",rmse[i])
 
     # Plot signals
-    plt.figure(1,figsize=(7,5))
+    plt.figure(1,figsize=(14,5))
     plt.plot(times[0],setpoints[0],linestyle="dashed",linewidth=2)            # Plot setpoint
     plt.plot(times[0],velocities_interp[0],linewidth=2)    # Plot measured values
     # Plot NN models
     for i in range(1,len(velocities)):
         plt.plot(times[0],velocities_interp[i],linewidth=1.5)
-    for i in range(1,len(velocities)):
-        plt.plot(times[0],errors_interp[i],"--",color="C"+str(i+1))
-        
-    leg = ["Setpoint"]
-    leg.extend(signal_names)
+    # for i in range(1,len(velocities)):
+    #     plt.plot(times[0],errors_interp[i],"--",color="C"+str(i+1))
+    leg = ["Setpoint","Measurement","P Model","NN Model"]
     plt.xlabel("Time [s]")
     plt.ylabel("Velocity [RPM]")
-    plt.legend(leg)                         
-    plt.title("Velocity Control Model Simulation")
+    plt.legend(leg)                       
+    plt.subplots_adjust(left=0.08,right=0.96)
+    plt.xlim([10,20])
+    plt.ylim([6000,6600])
+    #plt.title("Velocity Control Model Simulation")
 
     plt.figure(2,figsize=(7,5))
     plt.plot([int(epoch[-4:]) for epoch in signal_names[2:]],rmse[2:])
@@ -169,12 +172,18 @@ def main():
     plt.ylim([0, 100])
     plt.title("Model Performance")
 
-    if True:
-        plt.figure(3,figsize=(7,5))
-        plt.bar(["P-Controller","NN Model"], rmse[1:],width = 0.5)
+    try:
+        plt.figure(3,figsize=(2.5,5))
+        bars = (["P Model","NN Model"])
+        x_pos = [0,1]
+        plt.bar(x_pos, rmse[1:], width = 0.5, align='center')
+        plt.subplots_adjust(left=0.275)
+        plt.xticks(x_pos, bars)
         plt.xlabel("Model Type")
         plt.ylabel("RMSE")
         plt.title("Model Performance")
+    except:
+        print("Error plotting bar plot")
 
     
     plt.show()

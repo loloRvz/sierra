@@ -38,21 +38,24 @@ class CSVDataset(Dataset):
         self.X = np.empty([1,1]).astype('float64')
         self.y = np.empty([1]).astype('float64')
 
-        print("Loading model: ", os.path.basename(self.path))
+        print("Opening: ", os.path.basename(self.path))
         
     # plot dataset
     def plot_data(self):
         data = self.df.to_numpy()
+        data[:,TIME] -= 10
 
-        fig,ax=plt.subplots()
-        ax.plot(data[:,TIME],data[:,SETPOINT])
-        ax.plot(data[:,TIME],data[:,VELOCITY])
-        ax.axhline(y=0, color='k')
-        ax.set_xlabel("Time [s]")
-        ax.set_ylabel("Amplitude")
-        ax.legend([ "Setpoint [RPM]", \
+        plt.figure(1,figsize=(14,5))
+        plt.plot(data[:,TIME],data[:,SETPOINT])
+        plt.plot(data[:,TIME],data[:,VELOCITY])
+        plt.axhline(y=0, color='k')
+        plt.xlabel("Time [s]")
+        plt.ylabel("Amplitude")
+        plt.legend([ "Setpoint [RPM]", \
                     "Velocity [RPM]"]) # \                      
-        plt.title("Motor data reading")
+        #plt.title("Motor data reading")
+        plt.ylim([5000,7000])
+        plt.xlim([49,53])
 
         plt.show()
 
@@ -132,11 +135,6 @@ class MLP(Module):
         xavier_uniform_(self.hidden2.weight).to(self.dev)
         self.act3 = Softsign().to(self.dev)
 
-        # third hidden layer
-        self.hidden3 = Linear(layerDim, layerDim).to(self.dev)
-        xavier_uniform_(self.hidden3.weight).to(self.dev)
-        self.act4 = Softsign().to(self.dev)
-
         # output
         self.output_layer = Linear(layerDim, n_outputs).to(self.dev)
         xavier_uniform_(self.output_layer.weight).to(self.dev)
@@ -158,9 +156,6 @@ class MLP(Module):
         # second hidden layer
         X = self.hidden2(X)
         X = self.act3(X)
-        # third hidden layer
-        # X = self.hidden3(X)
-        # X = self.act4(X)
         # output layer
         X = self.output_layer(X)
         # denormalise
@@ -297,7 +292,7 @@ def main():
     list_of_files = glob.glob(dir_path + '/../data/training/*.csv')
     list_of_files = sorted(list_of_files)
     list_of_files.reverse()
-    path = list_of_files[0]
+    path = list_of_files[1]
     print("Opening: ",path)
 
     # Prepare dataset
