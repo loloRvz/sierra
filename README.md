@@ -72,4 +72,4 @@ More efficiently, the following script:
 
 *infer_model.py*:
 - Runs a simulation of the trained networks response to a specific input signal
-- Compares it to the PD model and true measurements (in ../evaluation/))
+- Compares it to the P model and true measurements (in ../evaluation/))
